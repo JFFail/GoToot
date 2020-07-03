@@ -1,13 +1,13 @@
 package main
 
 import (
-	//"bufio"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	//"strings"
+	"strings"
 	"time"
 )
 
@@ -151,21 +151,40 @@ func main() {
 	if !verifyToken(bearerHeader, baseURL) {
 		fmt.Println("Token is invalid!")
 		os.Exit(6)
-	} else {
-		fmt.Println("Good token!")
 	}
 
 	// Verify the user information.
 	currentUser := verifyUserCreds(bearerHeader, baseURL)
-	fmt.Println(currentUser)
-
-	// Verify the user information.
+	fmt.Printf("Logged in as: %v\n", currentUser.Acct)
+	fmt.Printf("%v statuses, last one posted on %v\n\n", currentUser.StatusesCount, currentUser.LastStatusAt)
 
 	// Start the main loop to see what the user would like to do.
-	/*
-		userChoice := ""
-		for userChoice != "quit" {
+	userChoice := ""
+	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
+	reader := bufio.NewReader(os.Stdin)
+	for userChoice != "quit" {
+		fmt.Print(userPrompt)
 
+		// Get the user's input.
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(8)
 		}
-	*/
+		userChoice = strings.ToLower(strings.Trim(text, "\n"))
+
+		// Figure out what action to take based on user input.
+		switch userChoice {
+		case "home":
+			fmt.Println("Display 'Home' timeline.")
+		case "local":
+			fmt.Println("Display 'Local' timeline.")
+		case "note":
+			fmt.Println("Display 'Notification' feed.")
+		case "toot":
+			fmt.Println("Prompt the user to post.")
+		default:
+			continue
+		}
+	}
 }
