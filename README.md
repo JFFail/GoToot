@@ -1,0 +1,2 @@
+# GoToot
+CLI Mastodon client.
