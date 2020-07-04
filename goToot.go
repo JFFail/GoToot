@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -58,6 +59,67 @@ type CurrentUser struct {
 	} `json:"fields"`
 }
 
+// Struct for a single toot. Used in response when posting.
+type SingleToot struct {
+	ID                 string      `json:"id"`
+	CreatedAt          time.Time   `json:"created_at"`
+	InReplyToID        interface{} `json:"in_reply_to_id"`
+	InReplyToAccountID interface{} `json:"in_reply_to_account_id"`
+	Sensitive          bool        `json:"sensitive"`
+	SpoilerText        string      `json:"spoiler_text"`
+	Visibility         string      `json:"visibility"`
+	Language           string      `json:"language"`
+	URI                string      `json:"uri"`
+	URL                string      `json:"url"`
+	RepliesCount       int         `json:"replies_count"`
+	ReblogsCount       int         `json:"reblogs_count"`
+	FavouritesCount    int         `json:"favourites_count"`
+	Favourited         bool        `json:"favourited"`
+	Reblogged          bool        `json:"reblogged"`
+	Muted              bool        `json:"muted"`
+	Bookmarked         bool        `json:"bookmarked"`
+	Pinned             bool        `json:"pinned"`
+	Content            string      `json:"content"`
+	Reblog             interface{} `json:"reblog"`
+	Application        struct {
+		Name    string `json:"name"`
+		Website string `json:"website"`
+	} `json:"application"`
+	Account struct {
+		ID             string        `json:"id"`
+		Username       string        `json:"username"`
+		Acct           string        `json:"acct"`
+		DisplayName    string        `json:"display_name"`
+		Locked         bool          `json:"locked"`
+		Bot            bool          `json:"bot"`
+		Discoverable   bool          `json:"discoverable"`
+		Group          bool          `json:"group"`
+		CreatedAt      time.Time     `json:"created_at"`
+		Note           string        `json:"note"`
+		URL            string        `json:"url"`
+		Avatar         string        `json:"avatar"`
+		AvatarStatic   string        `json:"avatar_static"`
+		Header         string        `json:"header"`
+		HeaderStatic   string        `json:"header_static"`
+		FollowersCount int           `json:"followers_count"`
+		FollowingCount int           `json:"following_count"`
+		StatusesCount  int           `json:"statuses_count"`
+		LastStatusAt   string        `json:"last_status_at"`
+		Emojis         []interface{} `json:"emojis"`
+		Fields         []struct {
+			Name       string    `json:"name"`
+			Value      string    `json:"value"`
+			VerifiedAt time.Time `json:"verified_at"`
+		} `json:"fields"`
+	} `json:"account"`
+	MediaAttachments []interface{} `json:"media_attachments"`
+	Mentions         []interface{} `json:"mentions"`
+	Tags             []interface{} `json:"tags"`
+	Emojis           []interface{} `json:"emojis"`
+	Card             interface{}   `json:"card"`
+	Poll             interface{}   `json:"poll"`
+}
+
 func queryMasto(bearer string, url string) []byte {
 	// Create an HTTP client
 	client := &http.Client{}
@@ -88,6 +150,55 @@ func queryMasto(bearer string, url string) []byte {
 
 	// Return the data.
 	return respData
+}
+
+// Function to push content to Mastodon.
+func postToMasto(bearer string, url string, content string) string {
+	// Create the url.
+	url = fmt.Sprintf("%v/statuses", url)
+
+	// Put together the form body.
+	reqBody, err := json.Marshal(map[string]string{
+		"status": content,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(10)
+	}
+
+	// Put together the client.
+	client := &http.Client{}
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(11)
+	}
+	request.Header.Set("Authorization", bearer)
+	request.Header.Set("Content-Type", "application/json")
+
+	// Make the request.
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(12)
+	}
+
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(13)
+	}
+
+	// Parse the toot to a struct and return the ID.
+	var postedToot SingleToot
+	err = json.Unmarshal(body, &postedToot)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(14)
+	}
+
+	return postedToot.ID
 }
 
 func verifyToken(bearer string, url string) bool {
@@ -159,6 +270,7 @@ func main() {
 	fmt.Printf("%v statuses, last one posted on %v\n\n", currentUser.StatusesCount, currentUser.LastStatusAt)
 
 	// Start the main loop to see what the user would like to do.
+	shortEnough := false
 	userChoice := ""
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
@@ -182,7 +294,30 @@ func main() {
 		case "note":
 			fmt.Println("Display 'Notification' feed.")
 		case "toot":
-			fmt.Println("Prompt the user to post.")
+			shortEnough = false
+			// Prompt the user for their text.
+			for !shortEnough {
+				fmt.Print("> ")
+				text, err = reader.ReadString('\n')
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(9)
+				}
+
+				// Trim the return.
+				text = strings.Trim(text, "\n")
+
+				// Verify we're within the length limit.
+				if len(text) > 500 {
+					continue
+				} else {
+					shortEnough = true
+				}
+
+				// Pass to the function.
+				currentPost := postToMasto(bearerHeader, baseURL, text)
+				fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
+			}
 		default:
 			continue
 		}
