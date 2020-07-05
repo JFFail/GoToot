@@ -335,6 +335,22 @@ func getTootContent() string {
 	return text
 }
 
+// Function to print the toots in a timeline.
+func printToots(allToots MultiToot) {
+	var tootContent string
+	// Loop through the slice backwards.
+	for i := len(allToots) - 1; i >= 0; i-- {
+		tootContent = allToots[i].Content
+		tootContent = strings.ReplaceAll(tootContent, `<p>`, "")
+		tootContent = strings.ReplaceAll(tootContent, `</p>`, "\n")
+		tootContent = strings.ReplaceAll(tootContent, `<br>`, "\n")
+		fmt.Printf("%v at %v\n\n", allToots[i].Account.Acct, allToots[i].CreatedAt)
+		fmt.Println(tootContent)
+		fmt.Printf("Favs: %v\tBoosts: %v\n", allToots[i].FavouritesCount, allToots[i].ReblogsCount)
+		fmt.Printf("\n\n")
+	}
+}
+
 // Main function.
 func main() {
 	// Import the file with the config.
@@ -398,7 +414,8 @@ func main() {
 				fmt.Println(err)
 				os.Exit(15)
 			}
-			fmt.Printf("%+v\n", currentTLParsed)
+			//fmt.Printf("%+v\n", currentTLParsed)
+			printToots(currentTLParsed)
 		case "local":
 			fmt.Println("Display 'Local' timeline.")
 		case "note":
