@@ -251,6 +251,7 @@ func getTootContent() string {
 	reader := bufio.NewReader(os.Stdin)
 	shortEnough := false
 	// Prompt the user for their text.
+	fmt.Printf("\nEnter your toot.\n")
 	for !shortEnough {
 		fmt.Print("> ")
 		text, err = reader.ReadString('\n')
@@ -263,7 +264,6 @@ func getTootContent() string {
 		text = strings.Trim(text, "\n")
 
 		// Verify we're within the length limit.
-		fmt.Printf("Checking length of: %v\n", text)
 		if len(text) > 500 {
 			fmt.Println("That toot is too long! Try again...")
 			continue
@@ -309,7 +309,9 @@ func main() {
 	fmt.Printf("%v statuses, last one posted on %v\n\n", currentUser.StatusesCount, currentUser.LastStatusAt)
 
 	// Start the main loop to see what the user would like to do.
-	userChoice := ""
+	var userChoice string
+	var cwText string
+	var currentPost string
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
 	for userChoice != "quit" {
@@ -336,7 +338,18 @@ func main() {
 			text := getTootContent()
 
 			// Pass to the function.
-			currentPost := postToMasto(bearerHeader, baseURL, text, "", false, "")
+			currentPost = postToMasto(bearerHeader, baseURL, text, "", false, "")
+			fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
+		case "cwtoot":
+			// Prompt the user for their spoiler text.
+			fmt.Printf("\nEnter your spoiler text.\n")
+			fmt.Print("> ")
+			cwText, err = reader.ReadString('\n')
+
+			// Prompt the user for their text.
+			text := getTootContent()
+			// Pass to the function.
+			currentPost = postToMasto(bearerHeader, baseURL, text, "", true, cwText)
 			fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
 		default:
 			continue
