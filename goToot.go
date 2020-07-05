@@ -153,14 +153,23 @@ func queryMasto(bearer string, url string) []byte {
 }
 
 // Function to push content to Mastodon.
-func postToMasto(bearer string, url string, content string) string {
+func postToMasto(bearer string, url string, content string, replyId string, sensitive bool, spoiler string) string {
 	// Create the url.
 	url = fmt.Sprintf("%v/statuses", url)
 
+	// Create the map for the form data.
+	formData := make(map[string]string)
+	formData["status"] = content
+	if replyId != "" {
+		formData["in_reply_to_id"] = replyId
+	}
+	if sensitive {
+		formData["sensitive"] = "true"
+		formData["spoiler_text"] = spoiler
+	}
+
 	// Put together the form body.
-	reqBody, err := json.Marshal(map[string]string{
-		"status": content,
-	})
+	reqBody, err := json.Marshal(formData)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(10)
@@ -235,6 +244,36 @@ func verifyUserCreds(bearer string, url string) CurrentUser {
 	return thisUser
 }
 
+// Function to get toot content.
+func getTootContent() string {
+	var text string
+	var err error
+	reader := bufio.NewReader(os.Stdin)
+	shortEnough := false
+	// Prompt the user for their text.
+	for !shortEnough {
+		fmt.Print("> ")
+		text, err = reader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(9)
+		}
+
+		// Trim the return.
+		text = strings.Trim(text, "\n")
+
+		// Verify we're within the length limit.
+		fmt.Printf("Checking length of: %v\n", text)
+		if len(text) > 500 {
+			fmt.Println("That toot is too long! Try again...")
+			continue
+		} else {
+			shortEnough = true
+		}
+	}
+	return text
+}
+
 // Main function.
 func main() {
 	// Import the file with the config.
@@ -270,7 +309,6 @@ func main() {
 	fmt.Printf("%v statuses, last one posted on %v\n\n", currentUser.StatusesCount, currentUser.LastStatusAt)
 
 	// Start the main loop to see what the user would like to do.
-	shortEnough := false
 	userChoice := ""
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
@@ -294,30 +332,12 @@ func main() {
 		case "note":
 			fmt.Println("Display 'Notification' feed.")
 		case "toot":
-			shortEnough = false
 			// Prompt the user for their text.
-			for !shortEnough {
-				fmt.Print("> ")
-				text, err = reader.ReadString('\n')
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(9)
-				}
+			text := getTootContent()
 
-				// Trim the return.
-				text = strings.Trim(text, "\n")
-
-				// Verify we're within the length limit.
-				if len(text) > 500 {
-					continue
-				} else {
-					shortEnough = true
-				}
-
-				// Pass to the function.
-				currentPost := postToMasto(bearerHeader, baseURL, text)
-				fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
-			}
+			// Pass to the function.
+			currentPost := postToMasto(bearerHeader, baseURL, text, "", false, "")
+			fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
 		default:
 			continue
 		}
