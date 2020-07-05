@@ -120,6 +120,67 @@ type SingleToot struct {
 	Poll             interface{}   `json:"poll"`
 }
 
+// Struct for multiple toot responses from timelines.
+type MultiToot []struct {
+	ID                 string      `json:"id"`
+	CreatedAt          time.Time   `json:"created_at"`
+	InReplyToID        interface{} `json:"in_reply_to_id"`
+	InReplyToAccountID interface{} `json:"in_reply_to_account_id"`
+	Sensitive          bool        `json:"sensitive"`
+	SpoilerText        string      `json:"spoiler_text"`
+	Visibility         string      `json:"visibility"`
+	Language           string      `json:"language"`
+	URI                string      `json:"uri"`
+	URL                string      `json:"url"`
+	RepliesCount       int         `json:"replies_count"`
+	ReblogsCount       int         `json:"reblogs_count"`
+	FavouritesCount    int         `json:"favourites_count"`
+	Favourited         bool        `json:"favourited"`
+	Reblogged          bool        `json:"reblogged"`
+	Muted              bool        `json:"muted"`
+	Bookmarked         bool        `json:"bookmarked"`
+	Pinned             bool        `json:"pinned"`
+	Content            string      `json:"content"`
+	Reblog             interface{} `json:"reblog"`
+	Application        struct {
+		Name    string `json:"name"`
+		Website string `json:"website"`
+	} `json:"application"`
+	Account struct {
+		ID             string        `json:"id"`
+		Username       string        `json:"username"`
+		Acct           string        `json:"acct"`
+		DisplayName    string        `json:"display_name"`
+		Locked         bool          `json:"locked"`
+		Bot            bool          `json:"bot"`
+		Discoverable   bool          `json:"discoverable"`
+		Group          bool          `json:"group"`
+		CreatedAt      time.Time     `json:"created_at"`
+		Note           string        `json:"note"`
+		URL            string        `json:"url"`
+		Avatar         string        `json:"avatar"`
+		AvatarStatic   string        `json:"avatar_static"`
+		Header         string        `json:"header"`
+		HeaderStatic   string        `json:"header_static"`
+		FollowersCount int           `json:"followers_count"`
+		FollowingCount int           `json:"following_count"`
+		StatusesCount  int           `json:"statuses_count"`
+		LastStatusAt   string        `json:"last_status_at"`
+		Emojis         []interface{} `json:"emojis"`
+		Fields         []struct {
+			Name       string    `json:"name"`
+			Value      string    `json:"value"`
+			VerifiedAt time.Time `json:"verified_at"`
+		} `json:"fields"`
+	} `json:"account"`
+	MediaAttachments []interface{} `json:"media_attachments"`
+	Mentions         []interface{} `json:"mentions"`
+	Tags             []interface{} `json:"tags"`
+	Emojis           []interface{} `json:"emojis"`
+	Card             interface{}   `json:"card"`
+	Poll             interface{}   `json:"poll"`
+}
+
 func queryMasto(bearer string, url string) []byte {
 	// Create an HTTP client
 	client := &http.Client{}
@@ -312,6 +373,8 @@ func main() {
 	var userChoice string
 	var cwText string
 	var currentPost string
+	var currentTimeline []byte
+	var currentTLParsed MultiToot
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
 	for userChoice != "quit" {
@@ -328,7 +391,14 @@ func main() {
 		// Figure out what action to take based on user input.
 		switch userChoice {
 		case "home":
-			fmt.Println("Display 'Home' timeline.")
+			// Get the byte slice for the timeline.
+			currentTimeline = queryMasto(bearerHeader, fmt.Sprintf("%v/timelines/home?limit=2", baseURL))
+			err = json.Unmarshal(currentTimeline, &currentTLParsed)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(15)
+			}
+			fmt.Printf("%+v\n", currentTLParsed)
 		case "local":
 			fmt.Println("Display 'Local' timeline.")
 		case "note":
