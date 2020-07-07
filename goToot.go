@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"jaytaylorcom/html2text"
 	"net/http"
 	"os"
 	"strings"
@@ -277,15 +278,16 @@ func getTootContent() string {
 
 // Function to print the toots in a timeline.
 func printToots(allToots []SingleToot) {
-	var tootContent string
 	// Loop through the slice backwards.
 	for i := len(allToots) - 1; i >= 0; i-- {
-		tootContent = allToots[i].Content
-		tootContent = strings.ReplaceAll(tootContent, `<p>`, "")
-		tootContent = strings.ReplaceAll(tootContent, `</p>`, "\n")
-		tootContent = strings.ReplaceAll(tootContent, `<br>`, "\n")
+		// Parse the HTML of the post to Markdown-like text.
+		markdown, err := html2text.FromString(allToots[i].Content)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(15)
+		}
 		fmt.Printf("%v at %v\n\n", allToots[i].Account.Acct, allToots[i].CreatedAt)
-		fmt.Println(tootContent)
+		fmt.Println(markdown)
 		fmt.Printf("Favs: %v\tBoosts: %v\n", allToots[i].FavouritesCount, allToots[i].ReblogsCount)
 		fmt.Printf("\n\n")
 	}
