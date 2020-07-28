@@ -286,6 +286,7 @@ func printToots(allToots []SingleToot) {
 			fmt.Println(err)
 			os.Exit(15)
 		}
+
 		// Modify the date.
 		datePretty := strings.Split(allToots[i].CreatedAt.String(), ".")
 
@@ -299,7 +300,11 @@ func printToots(allToots []SingleToot) {
 		}
 
 		// Print the main toot content parsed to Markdown.
-		fmt.Printf(markdown)
+		if allToots[i].Reblogged {
+			fmt.Printf("%v\n\n", markdown)
+		} else {
+			fmt.Printf("%v\n", markdown)
+		}
 
 		// Check if there's media.
 		media := allToots[i].MediaAttachments
