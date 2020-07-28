@@ -291,7 +291,8 @@ func printToots(allToots []SingleToot) {
 		datePretty := strings.Split(allToots[i].CreatedAt.String(), ".")
 
 		// Print the author and timestamp.
-		fmt.Printf("> %v at %v\n\n", allToots[i].Account.Acct, datePretty[0])
+		fmt.Printf("> %v at %v\n", allToots[i].Account.Acct, datePretty[0])
+		fmt.Printf(">> Visibility: %v\n", allToots[i].Visibility)
 
 		// Check if there's a CW.
 		if allToots[i].Sensitive {
@@ -301,9 +302,9 @@ func printToots(allToots []SingleToot) {
 
 		// Print the main toot content parsed to Markdown.
 		if allToots[i].Reblogged {
-			fmt.Printf("%v\n\n", markdown)
+			fmt.Printf("\n%v\n\n", markdown)
 		} else {
-			fmt.Printf("%v\n", markdown)
+			fmt.Printf("\n%v\n", markdown)
 		}
 
 		// Check if there's media.
