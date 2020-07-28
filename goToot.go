@@ -299,12 +299,11 @@ func printToots(allToots []SingleToot) {
 		}
 
 		// Print the main toot content parsed to Markdown.
-		fmt.Println(markdown)
+		fmt.Printf(markdown)
 
 		// Check if there's media.
 		media := allToots[i].MediaAttachments
 		if len(media) > 0 {
-			fmt.Printf("Inside the loop.\n")
 			// Loop through it.
 			for i := len(media) - 1; i >= 0; i-- {
 				// Get the type of media and the URL to it.
@@ -384,7 +383,14 @@ func main() {
 			//fmt.Printf("%+v\n", currentTLParsed)
 			printToots(currentTLParsed)
 		case "local":
-			fmt.Println("Display 'Local' timeline.")
+			// Get the byte slice.
+			currentTimeline = queryMasto(bearerHeader, fmt.Sprintf("%v/timelines/home?local=true&limit=2", baseURL))
+			err = json.Unmarshal(currentTimeline, &currentTLParsed)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(16)
+			}
+			printToots(currentTLParsed)
 		case "note":
 			fmt.Println("Display 'Notification' feed.")
 		case "toot":
