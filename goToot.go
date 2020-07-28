@@ -290,9 +290,12 @@ func printToots(allToots []SingleToot) {
 		// Modify the date.
 		datePretty := strings.Split(allToots[i].CreatedAt.String(), ".")
 
-		// Print the author and timestamp.
-		fmt.Printf("> %v at %v\n", allToots[i].Account.Acct, datePretty[0])
-		fmt.Printf(">> Visibility: %v\n", allToots[i].Visibility)
+		// Print the author, app, and timestamp.
+		applicationName := "Web"
+		if allToots[i].Application.Name != "" {
+			applicationName = allToots[i].Application.Name
+		}
+		fmt.Printf("> %v from |%v| to |%v| at %v\n", allToots[i].Account.Acct, applicationName, allToots[i].Visibility, datePretty[0])
 
 		// Check if there's a CW.
 		if allToots[i].Sensitive {
