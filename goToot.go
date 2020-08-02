@@ -123,7 +123,7 @@ type SingleToot struct {
 }
 
 // Struct for notifications.
-type Notifications struct {
+type Notification struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
@@ -155,7 +155,8 @@ type Notifications struct {
 		} `json:"fields"`
 	} `json:"account"`
 	Status struct {
-		ID                 string      `json:"id"`
+		ID                 string `json:"id"`
+		ClientID           int
 		CreatedAt          time.Time   `json:"created_at"`
 		InReplyToID        string      `json:"in_reply_to_id"`
 		InReplyToAccountID string      `json:"in_reply_to_account_id"`
@@ -174,8 +175,11 @@ type Notifications struct {
 		Bookmarked         bool        `json:"bookmarked"`
 		Content            string      `json:"content"`
 		Reblog             interface{} `json:"reblog"`
-		Application        interface{} `json:"application"`
-		Account            struct {
+		Application        struct {
+			Name    string `json:"name"`
+			Website string `json:"website"`
+		} `json:"application"`
+		Account struct {
 			ID             string        `json:"id"`
 			Username       string        `json:"username"`
 			Acct           string        `json:"acct"`
@@ -421,8 +425,46 @@ func printToots(allToots []SingleToot) {
 	}
 }
 
+// Function to print notifications.
+func printNotifications(allNotifications []Notification) {
+	// Loop through the slice backwards.
+	for i := len(allNotifications) - 1; i >= 0; i-- {
+		// Check the type.
+		if allNotifications[i].Type == "mention" {
+			// Modify the date.
+			datePretty := strings.Split(allNotifications[i].Status.CreatedAt.String(), ".")
+
+			// Get the application used.
+			applicationName := "Web"
+			if allNotifications[i].Status.Application.Name != "" {
+				applicationName = allNotifications[i].Status.Application.Name
+			}
+			fmt.Printf("> Mention by %v from |%v| to |%v| at %v\n", allNotifications[i].Account.Acct, applicationName, allNotifications[i].Status.Visibility, datePretty[0])
+		} else if allNotifications[i].Type == "favourite" || allNotifications[i].Type == "boost" {
+			// Print the info on the fav/boost and for what toot.
+			if allNotifications[i].Type == "favourite" {
+				fmt.Printf("> Favorite by %v\n", allNotifications[i].Account.Acct)
+			} else {
+				fmt.Printf("> Boost by %v\n", allNotifications[i].Account.Acct)
+			}
+		} else {
+			// Probably change this later, yeah?
+			fmt.Println("Not sure what to do with a type of %v\n", allNotifications[i].Type)
+		}
+
+		// Parse the toot content and print it.
+		markdown, err := html2text.FromString(allNotifications[i].Status.Content)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(18)
+		}
+		fmt.Printf("\n%v\n", markdown)
+		fmt.Printf("~=: ID: %v\tFavs: %v\tBoosts: %v :=~\n\n", allNotifications[i].Status.ClientID, allNotifications[i].Status.FavouritesCount, allNotifications[i].Status.ReblogsCount)
+	}
+}
+
 // Function to assign indexes to all toots for reference.
-func assignIndex(allToots []SingleToot, indexStart int) ([]SingleToot, int) {
+func assignIndexToots(allToots []SingleToot, indexStart int) ([]SingleToot, int) {
 	for i := len(allToots) - 1; i >= 0; i-- {
 		// Increment the counter.
 		indexStart++
@@ -433,6 +475,19 @@ func assignIndex(allToots []SingleToot, indexStart int) ([]SingleToot, int) {
 
 	// Return the updated array and the new index.
 	return allToots, indexStart
+}
+
+func assignIndexNotes(allNotes []Notification, indexStart int) ([]Notification, int) {
+	for i := len(allNotes) - 1; i >= 0; i-- {
+		// Increment the counter.
+		indexStart++
+
+		// Assign the ID.
+		allNotes[i].Status.ClientID = indexStart
+	}
+
+	// Return the updated slice and the new index.
+	return allNotes, indexStart
 }
 
 // Main function.
@@ -479,7 +534,7 @@ func main() {
 	var currentTimeline []byte
 	var currentNotifications []byte
 	var currentTLParsed []SingleToot
-	var currentNoteParsed []Notifications
+	var currentNotesParsed []Notification
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
 	for userChoice != "quit" {
@@ -505,7 +560,7 @@ func main() {
 			}
 
 			// Assign each toot an index for this app.
-			currentTLParsed, tootCounter = assignIndex(currentTLParsed, tootCounter)
+			currentTLParsed, tootCounter = assignIndexToots(currentTLParsed, tootCounter)
 
 			//fmt.Printf("%+v\n", currentTLParsed)
 			printToots(currentTLParsed)
@@ -517,19 +572,20 @@ func main() {
 				fmt.Println(err)
 				os.Exit(16)
 			}
-			currentTLParsed, tootCounter = assignIndex(currentTLParsed, tootCounter)
+			currentTLParsed, tootCounter = assignIndexToots(currentTLParsed, tootCounter)
 			printToots(currentTLParsed)
 		case "note":
 			// Get the byte slice.
-			currentNotifications = queryMasto(bearerHeader, fmt.Sprintf("%v/notifications?limit=1", baseURL))
+			currentNotifications = queryMasto(bearerHeader, fmt.Sprintf("%v/notifications?limit=2", baseURL))
 
 			// Parse to a struct.
-			err = json.Unmarshal(currentNotifications, &currentNoteParsed)
+			err = json.Unmarshal(currentNotifications, &currentNotesParsed)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(17)
 			}
-			fmt.Println(currentNoteParsed)
+			currentNotesParsed, tootCounter = assignIndexNotes(currentNotesParsed, tootCounter)
+			printNotifications(currentNotesParsed)
 			//fmt.Println(string(currentNotifications))
 		case "toot":
 			// Prompt the user for their text.
