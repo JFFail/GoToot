@@ -122,6 +122,100 @@ type SingleToot struct {
 	Poll             interface{}   `json:"poll"`
 }
 
+// Struct for notifications.
+type Notifications struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+	Account   struct {
+		ID             string        `json:"id"`
+		Username       string        `json:"username"`
+		Acct           string        `json:"acct"`
+		DisplayName    string        `json:"display_name"`
+		Locked         bool          `json:"locked"`
+		Bot            bool          `json:"bot"`
+		Discoverable   bool          `json:"discoverable"`
+		Group          bool          `json:"group"`
+		CreatedAt      time.Time     `json:"created_at"`
+		Note           string        `json:"note"`
+		URL            string        `json:"url"`
+		Avatar         string        `json:"avatar"`
+		AvatarStatic   string        `json:"avatar_static"`
+		Header         string        `json:"header"`
+		HeaderStatic   string        `json:"header_static"`
+		FollowersCount int           `json:"followers_count"`
+		FollowingCount int           `json:"following_count"`
+		StatusesCount  int           `json:"statuses_count"`
+		LastStatusAt   string        `json:"last_status_at"`
+		Emojis         []interface{} `json:"emojis"`
+		Fields         []struct {
+			Name       string      `json:"name"`
+			Value      string      `json:"value"`
+			VerifiedAt interface{} `json:"verified_at"`
+		} `json:"fields"`
+	} `json:"account"`
+	Status struct {
+		ID                 string      `json:"id"`
+		CreatedAt          time.Time   `json:"created_at"`
+		InReplyToID        string      `json:"in_reply_to_id"`
+		InReplyToAccountID string      `json:"in_reply_to_account_id"`
+		Sensitive          bool        `json:"sensitive"`
+		SpoilerText        string      `json:"spoiler_text"`
+		Visibility         string      `json:"visibility"`
+		Language           string      `json:"language"`
+		URI                string      `json:"uri"`
+		URL                string      `json:"url"`
+		RepliesCount       int         `json:"replies_count"`
+		ReblogsCount       int         `json:"reblogs_count"`
+		FavouritesCount    int         `json:"favourites_count"`
+		Favourited         bool        `json:"favourited"`
+		Reblogged          bool        `json:"reblogged"`
+		Muted              bool        `json:"muted"`
+		Bookmarked         bool        `json:"bookmarked"`
+		Content            string      `json:"content"`
+		Reblog             interface{} `json:"reblog"`
+		Application        interface{} `json:"application"`
+		Account            struct {
+			ID             string        `json:"id"`
+			Username       string        `json:"username"`
+			Acct           string        `json:"acct"`
+			DisplayName    string        `json:"display_name"`
+			Locked         bool          `json:"locked"`
+			Bot            bool          `json:"bot"`
+			Discoverable   bool          `json:"discoverable"`
+			Group          bool          `json:"group"`
+			CreatedAt      time.Time     `json:"created_at"`
+			Note           string        `json:"note"`
+			URL            string        `json:"url"`
+			Avatar         string        `json:"avatar"`
+			AvatarStatic   string        `json:"avatar_static"`
+			Header         string        `json:"header"`
+			HeaderStatic   string        `json:"header_static"`
+			FollowersCount int           `json:"followers_count"`
+			FollowingCount int           `json:"following_count"`
+			StatusesCount  int           `json:"statuses_count"`
+			LastStatusAt   string        `json:"last_status_at"`
+			Emojis         []interface{} `json:"emojis"`
+			Fields         []struct {
+				Name       string      `json:"name"`
+				Value      string      `json:"value"`
+				VerifiedAt interface{} `json:"verified_at"`
+			} `json:"fields"`
+		} `json:"account"`
+		MediaAttachments []interface{} `json:"media_attachments"`
+		Mentions         []struct {
+			ID       string `json:"id"`
+			Username string `json:"username"`
+			URL      string `json:"url"`
+			Acct     string `json:"acct"`
+		} `json:"mentions"`
+		Tags   []interface{} `json:"tags"`
+		Emojis []interface{} `json:"emojis"`
+		Card   interface{}   `json:"card"`
+		Poll   interface{}   `json:"poll"`
+	} `json:"status"`
+}
+
 // Function to query data from Mastodon.
 func queryMasto(bearer string, url string) []byte {
 	// Create an HTTP client
@@ -383,7 +477,9 @@ func main() {
 	var cwText string
 	var currentPost string
 	var currentTimeline []byte
+	var currentNotifications []byte
 	var currentTLParsed []SingleToot
+	var currentNoteParsed []Notifications
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
 	for userChoice != "quit" {
@@ -424,7 +520,17 @@ func main() {
 			currentTLParsed, tootCounter = assignIndex(currentTLParsed, tootCounter)
 			printToots(currentTLParsed)
 		case "note":
-			fmt.Println("Display 'Notification' feed.")
+			// Get the byte slice.
+			currentNotifications = queryMasto(bearerHeader, fmt.Sprintf("%v/notifications?limit=1", baseURL))
+
+			// Parse to a struct.
+			err = json.Unmarshal(currentNotifications, &currentNoteParsed)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(17)
+			}
+			fmt.Println(currentNoteParsed)
+			//fmt.Println(string(currentNotifications))
 		case "toot":
 			// Prompt the user for their text.
 			text := getTootContent()
