@@ -23,6 +23,7 @@ Still need to add:
 - Viewing Notifications
 - Boosts
 - Favorites
+- Delete toots
 - Better authentication
 - Viewing Favorites?
 - CLI toot for non-interactive posting?
