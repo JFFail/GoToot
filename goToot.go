@@ -566,7 +566,7 @@ func main() {
 			printToots(currentTLParsed)
 		case "local":
 			// Get the byte slice.
-			currentTimeline = queryMasto(bearerHeader, fmt.Sprintf("%v/timelines/home?local=true&limit=2", baseURL))
+			currentTimeline = queryMasto(bearerHeader, fmt.Sprintf("%v/timelines/public?local=true&limit=2", baseURL))
 			err = json.Unmarshal(currentTimeline, &currentTLParsed)
 			if err != nil {
 				fmt.Println(err)
