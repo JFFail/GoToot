@@ -62,7 +62,8 @@ type CurrentUser struct {
 
 // Struct for a single toot. Used in response when posting.
 type SingleToot struct {
-	ID                 string      `json:"id"`
+	ID                 string `json:"id"`
+	ClientID           int
 	CreatedAt          time.Time   `json:"created_at"`
 	InReplyToID        interface{} `json:"in_reply_to_id"`
 	InReplyToAccountID interface{} `json:"in_reply_to_account_id"`
@@ -321,9 +322,23 @@ func printToots(allToots []SingleToot) {
 				fmt.Printf("%v: %v\n", mediaType, mediaURL)
 			}
 		}
-		fmt.Printf("~=: Favs: %v\tBoosts: %v :=~\n", allToots[i].FavouritesCount, allToots[i].ReblogsCount)
+		fmt.Printf("~=: ID: %v\tFavs: %v\tBoosts: %v :=~\n", allToots[i].ClientID, allToots[i].FavouritesCount, allToots[i].ReblogsCount)
 		fmt.Printf("\n")
 	}
+}
+
+// Function to assign indexes to all toots for reference.
+func assignIndex(allToots []SingleToot, indexStart int) ([]SingleToot, int) {
+	for i := len(allToots) - 1; i >= 0; i-- {
+		// Increment the counter.
+		indexStart++
+
+		// Assign the ID.
+		allToots[i].ClientID = indexStart
+	}
+
+	// Return the updated array and the new index.
+	return allToots, indexStart
 }
 
 // Main function.
@@ -342,6 +357,9 @@ func main() {
 		fmt.Println(err)
 		os.Exit(2)
 	}
+
+	// Initialize the counter for toot IDs.
+	tootCounter := 0
 
 	// Create the base URL for our instance.
 	baseURL := fmt.Sprintf("%v/api/v1", configInfo.Instance)
@@ -389,6 +407,10 @@ func main() {
 				fmt.Println(err)
 				os.Exit(15)
 			}
+
+			// Assign each toot an index for this app.
+			currentTLParsed, tootCounter = assignIndex(currentTLParsed, tootCounter)
+
 			//fmt.Printf("%+v\n", currentTLParsed)
 			printToots(currentTLParsed)
 		case "local":
@@ -399,6 +421,7 @@ func main() {
 				fmt.Println(err)
 				os.Exit(16)
 			}
+			currentTLParsed, tootCounter = assignIndex(currentTLParsed, tootCounter)
 			printToots(currentTLParsed)
 		case "note":
 			fmt.Println("Display 'Notification' feed.")
