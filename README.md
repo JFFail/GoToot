@@ -15,12 +15,12 @@ Currently implemented:
 - Toots w/ CW
 - Viewing Home timeline
 - Viewing Local timeline
+- Viewing Notifications
 
 ## To Do
 
 Still need to add:
 
-- Viewing Notifications
 - Boosts
 - Favorites
 - Delete toots
