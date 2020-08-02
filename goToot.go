@@ -574,7 +574,7 @@ func main() {
 			}
 			currentTLParsed, tootCounter = assignIndexToots(currentTLParsed, tootCounter)
 			printToots(currentTLParsed)
-		case "note":
+		case "note", "notes":
 			// Get the byte slice.
 			currentNotifications = queryMasto(bearerHeader, fmt.Sprintf("%v/notifications?limit=2", baseURL))
 
@@ -605,6 +605,9 @@ func main() {
 			// Pass to the function.
 			currentPost = postToMasto(bearerHeader, baseURL, text, "", true, cwText)
 			fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
+		case "exit":
+			// Just reset the userChoice variable to quit.
+			userChoice = "quit"
 		default:
 			continue
 		}
