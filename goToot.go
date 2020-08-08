@@ -474,19 +474,33 @@ func printNotifications(allNotifications []Notification) {
 			} else {
 				fmt.Printf("> Boost by %v\n", allNotifications[i].Account.Acct)
 			}
+		} else if allNotifications[i].Type == "follow" {
+			// Print information about who followed.
+			markdown, err := html2text.FromString(allNotifications[i].Account.Note)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(23)
+			}
+			fmt.Printf("> Followed by %v\n", allNotifications[i].Account.Acct)
+			fmt.Printf(">> Has posted %v statuses, the last on %v\n", allNotifications[i].Account.StatusesCount, allNotifications[i].Account.LastStatusAt)
+			fmt.Printf("%v\n", markdown)
+			fmt.Printf("~=: Following: %v\tFollowers: %v :=~\n\n", allNotifications[i].Account.FollowingCount, allNotifications[i].Account.FollowersCount)
 		} else {
 			// Probably change this later, yeah?
+			fmt.Printf("%+v\n", allNotifications[i])
 			fmt.Println("Not sure what to do with a type of %v\n", allNotifications[i].Type)
 		}
 
-		// Parse the toot content and print it.
-		markdown, err := html2text.FromString(allNotifications[i].Status.Content)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(18)
+		// Parse the toot content and print it if there is any.
+		if allNotifications[i].Status.Content != "" {
+			markdown, err := html2text.FromString(allNotifications[i].Status.Content)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(18)
+			}
+			fmt.Printf("\n%v\n", markdown)
+			fmt.Printf("~=: ID: %v\tFavs: %v\tBoosts: %v :=~\n\n", allNotifications[i].Status.ClientID, allNotifications[i].Status.FavouritesCount, allNotifications[i].Status.ReblogsCount)
 		}
-		fmt.Printf("\n%v\n", markdown)
-		fmt.Printf("~=: ID: %v\tFavs: %v\tBoosts: %v :=~\n\n", allNotifications[i].Status.ClientID, allNotifications[i].Status.FavouritesCount, allNotifications[i].Status.ReblogsCount)
 	}
 }
 
@@ -602,6 +616,7 @@ func main() {
 	var currentNotifications []byte
 	var currentTLParsed []SingleToot
 	var currentNotesParsed []Notification
+	var lastTootsReceived string
 	userPrompt := fmt.Sprintf("[%v]: ", currentUser.Acct)
 	reader := bufio.NewReader(os.Stdin)
 	for userChoice != "quit" {
@@ -631,6 +646,9 @@ func main() {
 
 			//fmt.Printf("%+v\n", currentTLParsed)
 			printToots(currentTLParsed)
+
+			// Set where we got toots from.
+			lastTootsReceived = "tl"
 		case "local":
 			// Get the byte slice.
 			currentTimeline = queryMasto(bearerHeader, fmt.Sprintf("%v/timelines/public?local=true&limit=2", baseURL))
@@ -641,6 +659,7 @@ func main() {
 			}
 			currentTLParsed, tootCounter = assignIndexToots(currentTLParsed, tootCounter)
 			printToots(currentTLParsed)
+			lastTootsReceived = "tl"
 		case "note", "notes":
 			// Get the byte slice.
 			currentNotifications = queryMasto(bearerHeader, fmt.Sprintf("%v/notifications?limit=2", baseURL))
@@ -655,7 +674,7 @@ func main() {
 
 			// Print the notifications.
 			printNotifications(currentNotesParsed)
-			//fmt.Println(string(currentNotifications))
+			lastTootsReceived = "notes"
 		case "toot":
 			// Prompt the user for their text.
 			text := getTootContent()
@@ -680,11 +699,24 @@ func main() {
 
 			// Don't do anything if it was 0.
 			if tootSelection != 0 {
-				for _, toot := range currentTLParsed {
-					if toot.ClientID == tootSelection {
-						// Submit the fav and break.
-						favOrBoostToot(bearerHeader, baseURL, toot.ID, toot.Content, "fav")
-						break
+				if lastTootsReceived == "" {
+					fmt.Println("No toots in the local database to fav!")
+				} else if lastTootsReceived == "tl" {
+					for _, toot := range currentTLParsed {
+						if toot.ClientID == tootSelection {
+							// Submit the fav and break.
+							favOrBoostToot(bearerHeader, baseURL, toot.ID, toot.Content, "fav")
+							break
+						}
+					}
+				} else {
+					for _, note := range currentNotesParsed {
+						if note.Type == "mention" {
+							if note.Status.ClientID == tootSelection {
+								favOrBoostToot(bearerHeader, baseURL, note.Status.ID, note.Status.Content, "fav")
+								break
+							}
+						}
 					}
 				}
 			}
