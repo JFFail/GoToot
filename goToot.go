@@ -9,6 +9,7 @@ import (
 	"jaytaylorcom/html2text"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -375,6 +376,32 @@ func getTootContent() string {
 	return text
 }
 
+// Function to get the ID of a toot to boost or favorite.
+func getTootID() int {
+	// Prompt the user.
+	fmt.Printf("\nEnter the ID.\n")
+	fmt.Print("> ")
+
+	// Get user input.
+	reader := bufio.NewReader(os.Stdin)
+	userInput, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(22)
+	}
+	userInput = strings.Trim(userInput, "\n")
+
+	// Validate that it's an integer.
+	inputInt, err := strconv.Atoi(userInput)
+	if err != nil {
+		fmt.Printf("%v is not a valid integer! You must enter a valid ID...\n", userInput)
+		inputInt = 0
+	}
+
+	// Return the value.
+	return inputInt
+}
+
 // Function to print the toots in a timeline.
 func printToots(allToots []SingleToot) {
 	// Loop through the slice backwards.
@@ -477,6 +504,7 @@ func assignIndexToots(allToots []SingleToot, indexStart int) ([]SingleToot, int)
 	return allToots, indexStart
 }
 
+// Function to assign an index to notifications.
 func assignIndexNotes(allNotes []Notification, indexStart int) ([]Notification, int) {
 	for i := len(allNotes) - 1; i >= 0; i-- {
 		// Increment the counter.
@@ -488,6 +516,45 @@ func assignIndexNotes(allNotes []Notification, indexStart int) ([]Notification, 
 
 	// Return the updated slice and the new index.
 	return allNotes, indexStart
+}
+
+// Function to favorite a toot.
+func favOrBoostToot(bearer string, url string, tootID string, tootBody string, updateType string) {
+	// Parse the appropriate URL.
+	if updateType == "boost" {
+		url = fmt.Sprintf("%v/statuses/%v/reblog", url, tootID)
+	} else {
+		url = fmt.Sprintf("%v/statuses/%v/favourite", url, tootID)
+	}
+
+	// Put together the client.
+	client := &http.Client{}
+	request, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(19)
+	}
+	request.Header.Set("Authorization", bearer)
+	request.Header.Set("Content-Type", "application/json")
+
+	// Make the request.
+	_, err = client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(20)
+	} else {
+		// Parse the toot content to plaintext.
+		markdown, err := html2text.FromString(tootBody)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(21)
+		}
+		if updateType == "boost" {
+			fmt.Printf("Successfully boosted: %v\n", markdown)
+		} else {
+			fmt.Printf("Successfully favorited: %v\n", markdown)
+		}
+	}
 }
 
 // Main function.
@@ -585,6 +652,8 @@ func main() {
 				os.Exit(17)
 			}
 			currentNotesParsed, tootCounter = assignIndexNotes(currentNotesParsed, tootCounter)
+
+			// Print the notifications.
 			printNotifications(currentNotesParsed)
 			//fmt.Println(string(currentNotifications))
 		case "toot":
@@ -605,6 +674,20 @@ func main() {
 			// Pass to the function.
 			currentPost = postToMasto(bearerHeader, baseURL, text, "", true, cwText)
 			fmt.Printf("Successfully posted toot: %v\n\n", currentPost)
+		case "fav":
+			// Prompt the user for the ID of the toot to fav.
+			tootSelection := getTootID()
+
+			// Don't do anything if it was 0.
+			if tootSelection != 0 {
+				for _, toot := range currentTLParsed {
+					if toot.ClientID == tootSelection {
+						// Submit the fav and break.
+						favOrBoostToot(bearerHeader, baseURL, toot.ID, toot.Content, "fav")
+						break
+					}
+				}
+			}
 		case "exit":
 			// Just reset the userChoice variable to quit.
 			userChoice = "quit"
