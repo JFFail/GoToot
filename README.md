@@ -16,13 +16,13 @@ Currently implemented:
 - Viewing Home timeline
 - Viewing Local timeline
 - Viewing Notifications
+- Favorites
 
 ## To Do
 
 Still need to add:
 
 - Boosts
-- Favorites
 - Delete toots
 - Better authentication
 - Viewing Favorites?
